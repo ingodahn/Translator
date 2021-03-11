@@ -1,10 +1,30 @@
 <template>
   <div>
-    <input type="button" class="btn btn-info" value="Clear Filter" @click="clearSelector();" />
-    <input type="button" class="btn btn-info" value="Filter Source" @click="filterBy('source');" />
+    <input
+      type="button"
+      class="btn btn-info"
+      value="Clear Filter"
+      @click="clearSelector()"
+    />
+    <input
+      type="button"
+      class="btn btn-info"
+      value="Filter Source"
+      @click="filterBy('source')"
+    />
     <input type="text" v-model="selector" />
-    <input type="button" class="btn btn-info" value="Filter Target" @click="filterBy('target');" />
-    <p>To search for empty entries enter &circ;$ .</p>
+    <input
+      type="button"
+      class="btn btn-info"
+      value="Filter Target"
+      @click="filterBy('target')"
+    />
+    <input
+      type="button"
+      class="btn btn-info"
+      value="Yet to Translate"
+      @click="emptyTarget()"
+    />
   </div>
 </template>
 
@@ -30,6 +50,13 @@ export default {
       this.selectBy = type;
       this.Select.selectBy = type;
       this.Select.expr = new RegExp(this.selector, "i");
+      this.$emit("change-page");
+    },
+    emptyTarget: function() {
+      this.Select.selectBy = "target";
+      this.selectBy = "target";
+      this.selector = "^$";
+      this.Select.expr = new RegExp("^$");
       this.$emit("change-page");
     }
   }

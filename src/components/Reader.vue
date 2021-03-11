@@ -1,7 +1,7 @@
 <template>
   <div>
     <label class="text-reader">
-      Read {{ButtonLabel}}
+      Read {{ ButtonLabel }}
       <input type="file" @change="loadTextFromFile" />
     </label>
   </div>
@@ -16,7 +16,7 @@ export default {
       const reader = new FileReader();
 
       reader.onload = e => {
-        let langData = {
+        const langData = {
           lang: file.name.split(".")[0],
           data: JSON.parse(e.target.result)
         };

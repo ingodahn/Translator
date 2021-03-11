@@ -1,9 +1,17 @@
 <template>
   <div>
     <h1>Vue i18n Translator</h1>
-    <Reader v-if="source.lang=='no source'" ButtonLabel="Source" @load="source = $event"></Reader>
+    <Reader
+      v-if="source.lang == 'no source'"
+      ButtonLabel="Source"
+      @load="source = $event"
+    ></Reader>
     <span v-else>{{ source.lang }}&nbsp;&#8680;</span>
-    <Reader v-if="target.lang=='no target'" ButtonLabel="Target" @load="target = $event"></Reader>
+    <Reader
+      v-if="target.lang == 'no target'"
+      ButtonLabel="Target"
+      @load="target = $event"
+    ></Reader>
     <span v-else>&nbsp;{{ target.lang }}</span>
     <TranslationTable
       v-if="source.lang != 'no source' && target.lang != 'no target'"

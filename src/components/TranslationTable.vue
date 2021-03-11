@@ -3,7 +3,7 @@
     <Selector :Select="select" @change-page="changePage(1)" />
     <Editor
       :CurrentRow="currentRow"
-      v-if="currentRow.id != 'none'"
+      v-if="currentRow.group != 'none'"
       @saveAll="saveAll"
     />
     <DataTable :header-fields="headerFields" :data="data" :css="datatableCss">
@@ -51,7 +51,6 @@ import { DataTable, ItemsPerPageDropdown, Pagination } from "v-datatable-light";
 import { saveAs } from "file-saver";
 import Selector from "./Selector.vue";
 import Editor from "./Editor.vue";
-
 export default {
   name: "TranslatorTable",
   props: ["Source", "Target"],
@@ -62,6 +61,7 @@ export default {
         selectBy: "source"
       },
       headerFields: [],
+      allData: [],
       data: [],
       datatableCss: {
         table: "table table-bordered table-hover table-striped table-center",
@@ -90,7 +90,7 @@ export default {
       currentPage: 1,
       currentRow: {
         id: "none",
-        group: "",
+        group: "none",
         sourceTerm: "",
         targetTerm: ""
       }
@@ -123,52 +123,42 @@ export default {
       },
       "__slot:actions"
     ];
-    this.data = this.initialData.slice(0, this.itemsPerPage);
-    this.totalItems = this.initialData.length;
+    this.makeAllData(this.Source.data, this.Target.data);
+    this.data = this.allData.slice(0, this.itemsPerPage);
+    this.totalItems = this.allData.length;
   },
   methods: {
-    dtEditClick: function(props) {
-      this.currentRow = props.rowData;
-    },
-
-    saveAll: function() {
-      let newTrans = new Object();
-      this.initialData.forEach(p => {
-        let curGroups = p.group.split("/"),
-          curSource = this.Source.data,
-          curTrans = newTrans;
-        let i = 0;
-        while (i < curGroups.length - 1) {
-          let g = curGroups[i];
-          curSource = curSource[g];
-          if (curTrans.hasOwnProperty(g)) curTrans = curTrans[g];
-          else {
-            curTrans[g] = new Object();
-            curTrans = curTrans[g];
-          }
-          i++;
-        }
-        let gLast = curGroups[curGroups.length - 1];
-        if (curTrans.hasOwnProperty(gLast))
-          curTrans[gLast] += " | " + p.targetTerm;
-        else {
-          if (p.targetTerm.length) curTrans[gLast] = p.targetTerm;
+    makeAllData: function(source, target, groups = []) {
+      Object.keys(source).forEach(k => {
+        if (typeof source[k] == "string") {
+          const tt = Object.prototype.hasOwnProperty.call(target, k)
+            ? target[k]
+            : "";
+          const idgg = groups.slice();
+          idgg.push(k);
+          const idg = idgg.join(".");
+          this.allData.push({
+            id: idg,
+            group: idg,
+            sourceTerm: source[k],
+            targetTerm: tt
+          });
+        } else {
+          let to = {};
+          if (Object.prototype.hasOwnProperty.call(target, k)) to = target[k];
+          const group1 = groups.slice();
+          group1.push(k);
+          this.makeAllData(source[k], to, group1);
         }
       });
-      // Writing newTrans
-      let outData = JSON.stringify(newTrans, null, 2);
-      let blob = new Blob([outData], {
-        type: "text/plain; charset=utf-8"
-      });
-      saveAs(blob, this.Target.lang + ".json");
     },
 
     updateItemsPerPage: function(itemsPerPage) {
       this.itemsPerPage = parseInt(itemsPerPage, 10);
-      if (itemsPerPage >= this.initialData.length) {
-        this.data = this.initialData;
+      if (itemsPerPage >= this.allData.length) {
+        this.data = this.allData;
       } else {
-        this.data = this.initialData.slice(0, itemsPerPage);
+        this.data = this.allData.slice(0, itemsPerPage);
       }
     },
 
@@ -184,80 +174,44 @@ export default {
     },
 
     filteredData: function() {
-      let filteredBy = this.select.selectBy + "Term",
+      const filteredBy = this.select.selectBy + "Term",
         expr = this.select.expr;
-      let filteredData = this.initialData.filter(entry =>
+      const filteredData = this.allData.filter(entry =>
         entry[filteredBy].match(expr)
       );
       this.totalItems = filteredData.length;
       return filteredData;
     },
-    addGroup: function(lines, groups, sourceObj) {
-      let line = [];
-      if (typeof sourceObj == "string") {
-        line.push(groups.join("."));
-        line.push(sourceObj);
-        // Add translation if exists
-        lines.push(line);
-      }
+
+    dtEditClick: function(props) {
+      this.currentRow = props.rowData;
+    },
+
+    saveAll: function() {
+      const newTrans = new Object();
+      this.allData.forEach(p => {
+        if (p.targetTerm.length) {
+          const curGroups = p.group.split(".");
+          let curTrans = newTrans;
+          for (let i = 0; i < curGroups.length - 1; i++) {
+            const item = curGroups[i];
+            if (!Object.prototype.hasOwnProperty.call(curTrans, item))
+              curTrans[item] = {};
+            curTrans = curTrans[item];
+          }
+          curTrans[curGroups.slice(-1)[0]] = p.targetTerm;
+        }
+      });
+      // Writing newTrans
+      const outData = JSON.stringify(newTrans, null, 2);
+      const blob = new Blob([outData], {
+        type: "text/plain; charset=utf-8"
+      });
+      saveAs(blob, this.Target.lang + ".json");
     }
   },
-  computed: {
-    initialData: function() {
-      let tableData = [],
-        groups = Object.keys(this.Source.data),
-        enr = 0;
-      groups.forEach(g => {
-        let td = this.Target.data.hasOwnProperty(g)
-          ? this.Target.data[g]
-          : "none";
-        let gd = groupData(g, this.Source.data[g], td, enr);
-        gd.forEach(e => tableData.push(e));
-        enr += gd.length;
-      });
-      return tableData;
-    },
-    initialData1: function() {
-      let tableData = [];
-      return tableData;
-    }
-  }
+  computed: {}
 };
-
-function groupData(groups, gData, tData, enr) {
-  let gEntries = [],
-    myEnr = enr;
-  if (typeof gData == "string") {
-    let tts = gData.split(" | ");
-    let tEntry =
-      tData == "none" || tData == undefined
-        ? new Array(tts.length).fill("")
-        : tData.split(" | ");
-    tts.forEach((ss, si) =>
-      gEntries.push({
-        id: myEnr,
-        group: groups,
-        sourceTerm: ss,
-        targetTerm: tEntry[si]
-      })
-    );
-    return gEntries;
-  } else {
-    Object.keys(gData).forEach(g => {
-      let entries = groupData(
-        groups + "/" + g,
-        gData[g],
-        tData == "none" ? "none" : tData[g],
-        myEnr
-      );
-      entries.forEach(e => {
-        gEntries.push(e);
-        myEnr++;
-      });
-    });
-  }
-  return gEntries;
-}
 </script>
 
 <style>
